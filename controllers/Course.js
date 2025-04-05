@@ -9,11 +9,15 @@ const { uploadImageToCloudinary } = require("../utils/imageUploader");
 exports.createCourse = async (req, res) => {
     try {
         // Extract course details from request body
-        const { courseName, courseDescription, whatYouWillLearn, price, tag } = req.body;
+        const { courseName, courseDescription, whatYouWillLearn, price, tags:_tags,category} = req.body;
         const thumbnail = req.files.thumbnailImage; // Get thumbnail image from request files
+        
 
+        //convert tags to array
+        const tags = JSON.parse(_tags);
+        console.log("tag",tags);
         // Validate input fields
-        if (!courseName || !courseDescription || !whatYouWillLearn || !price || !tag || !thumbnail) {
+        if (!courseName || !courseDescription || !whatYouWillLearn || !price || !tags || !thumbnail || !category) {
             return res.status(400).json({
                 success: false,
                 message: 'All fields are required',
@@ -34,17 +38,17 @@ exports.createCourse = async (req, res) => {
         }
 
         // Validate tag details
-        const tagDetails = await Tag.findById(tag);
-        if (!tagDetails) {
+        const categoryDetails = await Tag.findById(category);
+        if (!categoryDetails) {
             return res.status(400).json({
                 success: false,
-                message: 'Tag details not found',
+                message: 'category details not found',
             });
         }
 
         // Upload thumbnail image to Cloudinary
         const thumbnailImage = await uploadImageToCloudinary(thumbnail, process.env.FOLDER_NAME);
-
+        console.log("thumbnailImage", thumbnailImage);
         // Create a new course entry in the database
         const newCourse = await Course.create({
             courseName,
@@ -52,7 +56,8 @@ exports.createCourse = async (req, res) => {
             instructor: instructorDetails._id,
             whatYouWillLearn,
             price,
-            tag: tagDetails._id,
+            tags,
+            category: categoryDetails._id,
             thumbnail: thumbnailImage.secure_url,
         });
 
@@ -117,7 +122,7 @@ exports.getCourseDetails = async (req, res) => {
         const {courseId} = req.body;
         //find course details
         const courseDetails = await Course.findById(
-            { _id: courseId }
+            { _id: courseId })
             .populate(
                 {
                     path:"instructor",
@@ -127,14 +132,14 @@ exports.getCourseDetails = async (req, res) => {
                 }
             )
             .populate("category")
-            .populate("ratingAndReviews")
+            // .populate("ratingAndReviews")
             .populate({
                 path:"courseContent",
                 populate:{
                     path:"subSection",
                 },
             })
-        ).exec();
+        .exec();
 
         if(!courseDetails){
             return res.status(404).json({
