@@ -4,10 +4,10 @@ const Course = require("../models/Course"); // Importing the Course model
 // Function to create a new section
 exports.createSection = async (req, res) => {
     try {
-        const { SectionName, courseId } = req.body; // Extracting section name and course ID from request
+        const { sectionName, courseId } = req.body; // Extracting section name and course ID from request
 
         // Validate request data
-        if (!SectionName || !courseId) {
+        if (!sectionName || !courseId) {
             return res.status(400).json({
                 success: false,
                 message: 'Missing Properties',
@@ -15,7 +15,7 @@ exports.createSection = async (req, res) => {
         }
 
         // Create a new section in the database
-        const newSection = await Section.create({ sectionName: SectionName });
+        const newSection = await Section.create({ sectionName});
 
         // Update the course by adding the new section ID to its content
         const updateCourseDetails = await Course.findByIdAndUpdate(
@@ -87,8 +87,15 @@ exports.updateSection = async (req, res) => {
 exports.deleteSection = async (req, res) => {
     try {
         // Get section ID from request parameters
-        const { sectionId } = req.params;
-
+        const { sectionId,courseId } = req.body;
+        //delete section from course content
+        await Course.findByIdAndUpdate(
+            courseId,
+            {
+                $pull: { courseContent: sectionId },
+            },
+            { new: true }
+        );
         // Delete the section from the database
         await Section.findByIdAndDelete(sectionId);
 
